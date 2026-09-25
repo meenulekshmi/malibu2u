@@ -79,19 +79,30 @@ export async function POST(request: Request) {
       data: {
         userId: currentUser.userId,
         totalAmount,
+        subtotal: totalAmount,
         advanceAmount,
         remainingCodAmount,
+        amountDue: totalAmount,
+        amountPaid: 0,
+        remainingAmount: totalAmount,
         discountAmount: 0,
-        status: 'WHATSAPP_PENDING',
-        paymentMethod: 'WHATSAPP',
+        status: 'PAYMENT_PENDING',
+        paymentMethod: 'UPI',
         paymentStatus: 'PENDING',
         advancePaymentStatus: 'PENDING',
         remainingPaymentStatus: 'PENDING',
         trackingNumber,
         shippingAddressJson: JSON.stringify({
-          fullName: currentUser.name,
-          email: currentUser.email,
-          phone: (currentUser as any).phone || '',
+          fullName: shippingAddress?.fullName || currentUser.name,
+          email: shippingAddress?.email || currentUser.email,
+          phone: shippingAddress?.phone || (currentUser as any).phone || '',
+          addressLine1: shippingAddress?.addressLine1 || 'Pending WhatsApp Address Confirmation',
+          addressLine2: shippingAddress?.addressLine2 || '',
+          landmark: shippingAddress?.landmark || '',
+          city: shippingAddress?.city || 'Kochi',
+          district: shippingAddress?.district || 'Ernakulam',
+          state: shippingAddress?.state || 'Kerala',
+          postalCode: shippingAddress?.postalCode || '682001',
           ...shippingAddress,
         }),
         items: {
@@ -104,7 +115,7 @@ export async function POST(request: Request) {
         },
       },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, phone: true } },
         items: { include: { product: true } },
       },
     });
@@ -118,6 +129,11 @@ export async function POST(request: Request) {
         },
       });
     }
+
+    // Trigger WhatsApp Automated Notifications in backend
+    const { sendOrderNotification } = await import('@/lib/notification-service');
+    await sendOrderNotification('ORDER_RECEIVED', { order });
+    await sendOrderNotification('PAYMENT_REQUIRED', { order });
 
     return NextResponse.json({
       success: true,

@@ -12,12 +12,24 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized admin access required' }, { status: 403 });
     }
 
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key: 'whatsapp_number' },
-    });
+    const settings = await prisma.systemSetting.findMany();
+    const map: Record<string, string> = {};
+    settings.forEach((s) => (map[s.key] = s.value));
 
-    const activeNumber = setting?.value || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+91 98765 43210';
-    return NextResponse.json({ whatsappNumber: activeNumber });
+    const activeNumber = map['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+91 80785 65355';
+    const upiId = map['payment_upi_id'] || 'malibu2u@upi';
+    const accountName = map['payment_account_name'] || 'Malibu2u Gaming';
+    const paymentInstructions = map['payment_instructions'] || 'Please complete the payment and send the payment screenshot / UTR number in this WhatsApp conversation.';
+    const storeName = map['store_name'] || 'Malibu2u';
+
+    return NextResponse.json({
+      whatsappNumber: activeNumber,
+      paymentUpiId: upiId,
+      paymentAccountName: accountName,
+      paymentInstructions: paymentInstructions,
+      storeName: storeName,
+      settings: map,
+    });
   } catch (error) {
     console.error('Error fetching settings:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -32,37 +44,58 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { whatsappNumber } = body;
+    const {
+      whatsappNumber,
+      paymentUpiId,
+      paymentAccountName,
+      paymentInstructions,
+      storeName,
+    } = body;
 
-    if (!whatsappNumber || typeof whatsappNumber !== 'string' || whatsappNumber.trim() === '') {
-      return NextResponse.json({ error: 'A valid WhatsApp phone number is required' }, { status: 400 });
+    const upsertSetting = async (key: string, value: string) => {
+      await prisma.systemSetting.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      });
+    };
+
+    if (whatsappNumber && typeof whatsappNumber === 'string' && whatsappNumber.trim() !== '') {
+      const normalized = normalizeWhatsAppNumber(whatsappNumber);
+      if (!normalized) {
+        return NextResponse.json({ error: 'Invalid phone number format. Please provide a valid 10-digit or international number.' }, { status: 400 });
+      }
+      const trimmedValue = whatsappNumber.trim();
+      await upsertSetting('whatsapp_number', trimmedValue);
+
+      // Sync .env and .env.local files
+      try {
+        const envContent = `NEXT_PUBLIC_WHATSAPP_NUMBER="${trimmedValue}"\n`;
+        const rootDir = process.cwd();
+        fs.writeFileSync(path.join(rootDir, '.env'), envContent, 'utf-8');
+        fs.writeFileSync(path.join(rootDir, '.env.local'), envContent, 'utf-8');
+      } catch (e) {
+        console.warn('Could not rewrite env files:', e);
+      }
     }
 
-    const normalized = normalizeWhatsAppNumber(whatsappNumber);
-    if (!normalized) {
-      return NextResponse.json({ error: 'Invalid phone number format. Please provide a valid 10-digit or international number.' }, { status: 400 });
+    if (paymentUpiId !== undefined) {
+      await upsertSetting('payment_upi_id', paymentUpiId.trim());
     }
 
-    const trimmedValue = whatsappNumber.trim();
-
-    // Persist to database
-    const setting = await prisma.systemSetting.upsert({
-      where: { key: 'whatsapp_number' },
-      update: { value: trimmedValue },
-      create: { key: 'whatsapp_number', value: trimmedValue },
-    });
-
-    // Optionally sync .env and .env.local files
-    try {
-      const envContent = `NEXT_PUBLIC_WHATSAPP_NUMBER="${trimmedValue}"\n`;
-      const rootDir = process.cwd();
-      fs.writeFileSync(path.join(rootDir, '.env'), envContent, 'utf-8');
-      fs.writeFileSync(path.join(rootDir, '.env.local'), envContent, 'utf-8');
-    } catch (e) {
-      console.warn('Could not rewrite env files:', e);
+    if (paymentAccountName !== undefined) {
+      await upsertSetting('payment_account_name', paymentAccountName.trim());
     }
 
-    return NextResponse.json({ success: true, whatsappNumber: setting.value });
+    if (paymentInstructions !== undefined) {
+      await upsertSetting('payment_instructions', paymentInstructions.trim());
+    }
+
+    if (storeName !== undefined) {
+      await upsertSetting('store_name', storeName.trim());
+    }
+
+    return NextResponse.json({ success: true, message: 'Settings saved successfully' });
   } catch (error: any) {
     console.error('Error updating settings:', error);
     return NextResponse.json({ error: error?.message || 'Failed to update settings' }, { status: 500 });

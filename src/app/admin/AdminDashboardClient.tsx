@@ -29,11 +29,16 @@ import {
   DollarSign,
   TrendingUp,
   Upload,
+  MessageSquare,
+  FileCheck2,
+  CreditCard,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { formatDisplayPhoneNumber, normalizeWhatsAppNumber } from '@/lib/whatsapp';
+import { BulkProductImport } from '@/components/admin/BulkProductImport';
+import { WhatsAppMessageTemplatesManager } from '@/components/admin/WhatsAppMessageTemplatesManager';
 
-type TabType = 'overview' | 'products' | 'categories' | 'orders' | 'inventory' | 'sell-trade' | 'banners' | 'coupons' | 'reviews' | 'customers' | 'settings';
+type TabType = 'overview' | 'products' | 'categories' | 'orders' | 'whatsapp-templates' | 'inventory' | 'sell-trade' | 'banners' | 'coupons' | 'reviews' | 'customers' | 'settings';
 
 interface AdminDashboardProps {
   initialProducts: any[];
@@ -62,8 +67,17 @@ export function AdminDashboardClient({
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [whatsappInput, setWhatsappInput] = useState('');
+  const [upiIdInput, setUpiIdInput] = useState('');
+  const [accountNameInput, setAccountNameInput] = useState('');
+  const [instructionsInput, setInstructionsInput] = useState('');
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
   const [whatsappMsg, setWhatsappMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Payment Verification Modal / Action state
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectReasonInput, setRejectReasonInput] = useState('');
+  const [targetVerifyOrder, setTargetVerifyOrder] = useState<any | null>(null);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
 
   // Search & Filter local states
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,6 +99,7 @@ export function AdminDashboardClient({
   };
 
   // Modals state
+  const [productSubTab, setProductSubTab] = useState<'catalog' | 'bulk-import'>('catalog');
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
 
@@ -209,9 +224,10 @@ export function AdminDashboardClient({
       fetch('/api/admin/settings')
         .then((res) => res.json())
         .then((data) => {
-          if (data?.whatsappNumber) {
-            setWhatsappInput(data.whatsappNumber);
-          }
+          if (data?.whatsappNumber) setWhatsappInput(data.whatsappNumber);
+          if (data?.paymentUpiId) setUpiIdInput(data.paymentUpiId);
+          if (data?.paymentAccountName) setAccountNameInput(data.paymentAccountName);
+          if (data?.paymentInstructions) setInstructionsInput(data.paymentInstructions);
         })
         .catch(() => {});
     }
@@ -225,18 +241,82 @@ export function AdminDashboardClient({
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ whatsappNumber: whatsappInput }),
+        body: JSON.stringify({
+          whatsappNumber: whatsappInput,
+          paymentUpiId: upiIdInput,
+          paymentAccountName: accountNameInput,
+          paymentInstructions: instructionsInput,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        setWhatsappMsg({ type: 'success', text: 'WhatsApp Support Number saved successfully! Dynamic site updates active.' });
+        setWhatsappMsg({ type: 'success', text: 'Payment configuration and WhatsApp settings saved successfully!' });
       } else {
-        setWhatsappMsg({ type: 'error', text: data?.error || 'Failed to save WhatsApp number' });
+        setWhatsappMsg({ type: 'error', text: data?.error || 'Failed to save settings' });
       }
     } catch (err: any) {
       setWhatsappMsg({ type: 'error', text: 'Failed to update settings' });
     } finally {
       setSavingWhatsapp(false);
+    }
+  };
+
+  const handleConfirmPayment = async (orderId: string) => {
+    if (!confirm('Are you sure you want to verify and confirm this payment? This will mark the order as PAID and CONFIRMED and send a WhatsApp confirmation.')) return;
+    setVerifyingPayment(true);
+    try {
+      const res = await fetch('/api/admin/orders/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, action: 'confirm' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        refreshData();
+        if (orderDetailModal && orderDetailModal.id === orderId) {
+          setOrderDetailModal({ ...orderDetailModal, paymentStatus: 'PAID', status: 'CONFIRMED' });
+        }
+        alert('Payment confirmed successfully! Notification triggered.');
+      } else {
+        alert(`Error: ${data.error || 'Failed to confirm payment'}`);
+      }
+    } catch (err) {
+      alert('Failed to execute payment confirmation');
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!targetVerifyOrder) return;
+    setVerifyingPayment(true);
+    try {
+      const res = await fetch('/api/admin/orders/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: targetVerifyOrder.id,
+          action: 'reject',
+          rejectionReason: rejectReasonInput,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRejectModalOpen(false);
+        setRejectReasonInput('');
+        setTargetVerifyOrder(null);
+        refreshData();
+        if (orderDetailModal && orderDetailModal.id === targetVerifyOrder.id) {
+          setOrderDetailModal({ ...orderDetailModal, paymentStatus: 'REJECTED' });
+        }
+        alert('Payment rejected. Customer will receive a notification with the rejection reason.');
+      } else {
+        alert(`Error: ${data.error || 'Failed to reject payment'}`);
+      }
+    } catch (err) {
+      alert('Failed to execute payment rejection');
+    } finally {
+      setVerifyingPayment(false);
     }
   };
 
@@ -549,6 +629,20 @@ export function AdminDashboardClient({
           </button>
 
           <button
+            onClick={() => setActiveTab('whatsapp-templates')}
+            className={`w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'whatsapp-templates' ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black' : 'text-slate-300 hover:bg-slate-900'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <MessageSquare className="w-4 h-4 text-emerald-400" /> WhatsApp Templates
+            </div>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-[10px] font-mono text-emerald-300 border border-emerald-500/30">
+              Automation
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('inventory')}
             className={`w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'inventory' ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20' : 'text-slate-300 hover:bg-slate-900'
@@ -760,21 +854,57 @@ export function AdminDashboardClient({
         {/* PRODUCTS TAB */}
         {activeTab === 'products' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[#111726] border border-slate-800">
-              <div>
-                <h2 className="text-xl font-extrabold text-white">Product Catalog Management</h2>
-                <p className="text-xs text-slate-400">Add, edit, pricing, stock, images, and publish store products.</p>
-              </div>
+            {/* Products Sub-Navigation Tabs */}
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#111726] border border-slate-800 w-fit">
               <button
-                onClick={handleOpenCreateProduct}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/20 hover:brightness-110"
+                onClick={() => setProductSubTab('catalog')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  productSubTab === 'catalog'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
               >
-                <Plus className="w-4 h-4" /> Add New Product
+                <Package className="w-4 h-4" /> Product Catalog ({products.length})
+              </button>
+              <button
+                onClick={() => setProductSubTab('bulk-import')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  productSubTab === 'bulk-import'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <Upload className="w-4 h-4" /> Bulk Import (JSON)
               </button>
             </div>
 
-            {/* Product Table */}
-            <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 overflow-x-auto">
+            {productSubTab === 'bulk-import' ? (
+              <BulkProductImport onImportComplete={refreshData} />
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[#111726] border border-slate-800">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white">Product Catalog Management</h2>
+                    <p className="text-xs text-slate-400">Add, edit, pricing, stock, images, and publish store products.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setProductSubTab('bulk-import')}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-colors"
+                    >
+                      <Upload className="w-4 h-4 text-cyan-400" /> Bulk Import
+                    </button>
+                    <button
+                      onClick={handleOpenCreateProduct}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/20 hover:brightness-110"
+                    >
+                      <Plus className="w-4 h-4" /> Add New Product
+                    </button>
+                  </div>
+                </div>
+
+                {/* Product Table */}
+                <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 overflow-x-auto">
               {products.length === 0 ? (
                 <div className="text-center py-12 space-y-3">
                   <Package className="w-12 h-12 text-slate-600 mx-auto" />
@@ -837,8 +967,10 @@ export function AdminDashboardClient({
                 </table>
               )}
             </div>
-          </div>
+          </>
         )}
+      </div>
+    )}
 
         {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
@@ -910,9 +1042,20 @@ export function AdminDashboardClient({
         {/* ORDERS TAB */}
         {activeTab === 'orders' && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800">
-              <h2 className="text-xl font-extrabold text-white">Real Customer Orders</h2>
-              <p className="text-xs text-slate-400">Manage 50% Cashfree advance payments and 50% remaining COD deliveries.</p>
+            <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-cyan-400" /> Real Customer Orders
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Manage WhatsApp-first and store checkout orders with live payment verification and automated notifications.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl font-mono">
+                  {orders.filter(o => o.paymentStatus === 'PROOF_SUBMITTED' || o.paymentStatus === 'UNDER_REVIEW' || o.paymentStatus === 'UNDER_VERIFICATION').length} Proof(s) Awaiting Review
+                </span>
+              </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 overflow-x-auto">
@@ -928,54 +1071,109 @@ export function AdminDashboardClient({
                       <th className="py-3 px-2">Order ID</th>
                       <th className="py-3 px-2">Customer</th>
                       <th className="py-3 px-2">Total</th>
-                      <th className="py-3 px-2">50% Advance</th>
-                      <th className="py-3 px-2">50% COD</th>
-                      <th className="py-3 px-2">Status</th>
+                      <th className="py-3 px-2">Payment Status</th>
+                      <th className="py-3 px-2">Proof / UTR</th>
+                      <th className="py-3 px-2">Fulfillment</th>
                       <th className="py-3 px-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {orders.map((o) => (
-                      <tr key={o.id} className="hover:bg-slate-900/60">
-                        <td className="py-3 px-2 font-mono font-bold text-white">{o.id.slice(0, 8)}...</td>
-                        <td className="py-3 px-2">
-                          <p className="font-bold text-white">{o.user?.name || 'Valued Gamer'}</p>
-                          <p className="text-[10px] text-slate-400">{o.user?.email}</p>
-                        </td>
-                        <td className="py-3 px-2 font-bold font-mono text-white">₹{o.totalAmount.toLocaleString()}</td>
-                        <td className="py-3 px-2 font-mono text-cyan-400">₹{o.advanceAmount.toLocaleString()}</td>
-                        <td className="py-3 px-2 font-mono text-amber-400">₹{o.remainingCodAmount.toLocaleString()}</td>
-                        <td className="py-3 px-2">
-                          <select
-                            value={o.status}
-                            onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
-                            className="bg-slate-900 border border-slate-700 text-[11px] text-white rounded px-2 py-1 focus:outline-none focus:border-cyan-400 font-mono"
-                          >
-                            <option value="ORDER_PLACED">ORDER_PLACED</option>
-                            <option value="ADVANCE_PAID">ADVANCE_PAID</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="PACKED">PACKED</option>
-                            <option value="SHIPPED">SHIPPED</option>
-                            <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
-                            <option value="DELIVERED">DELIVERED</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                          </select>
-                        </td>
-                        <td className="py-3 px-2 text-right">
-                          <button
-                            onClick={() => setOrderDetailModal(o)}
-                            className="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 text-[11px] font-bold"
-                          >
-                            View Order
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {orders.map((o) => {
+                      const isAwaitingVerification = o.paymentStatus === 'PROOF_SUBMITTED' || o.paymentStatus === 'UNDER_REVIEW' || o.paymentStatus === 'UNDER_VERIFICATION';
+                      return (
+                        <tr key={o.id} className={`hover:bg-slate-900/60 ${isAwaitingVerification ? 'bg-amber-500/5' : ''}`}>
+                          <td className="py-3 px-2 font-mono font-bold text-white">
+                            {o.id.slice(0, 8)}...
+                            {o.paymentMethod && (
+                              <span className="block text-[10px] text-slate-500 font-normal">{o.paymentMethod}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2">
+                            <p className="font-bold text-white">{o.user?.name || 'Customer'}</p>
+                            <p className="text-[10px] text-slate-400">{o.user?.phone || o.user?.email}</p>
+                          </td>
+                          <td className="py-3 px-2 font-bold font-mono text-white">
+                            ₹{o.totalAmount.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                              o.paymentStatus === 'PAID'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : o.paymentStatus === 'PROOF_SUBMITTED' || o.paymentStatus === 'UNDER_REVIEW'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
+                                : o.paymentStatus === 'REJECTED'
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {o.paymentStatus || 'PENDING'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 font-mono text-[11px]">
+                            {o.paymentProof || o.paymentReference ? (
+                              <div className="space-y-0.5">
+                                {o.paymentReference && <span className="text-cyan-400 block font-bold">UTR: {o.paymentReference}</span>}
+                                {o.paymentProof && (
+                                  <a
+                                    href={o.paymentProof}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-emerald-400 hover:underline flex items-center gap-1 text-[10px] font-bold"
+                                  >
+                                    <FileCheck2 className="w-3 h-3" /> View Screenshot
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500 text-[10px] italic">None</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2">
+                            <select
+                              value={o.status}
+                              onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
+                              className="bg-slate-900 border border-slate-700 text-[11px] text-white rounded px-2 py-1 focus:outline-none focus:border-cyan-400 font-mono"
+                            >
+                              <option value="PAYMENT_PENDING">PAYMENT_PENDING</option>
+                              <option value="ORDER_PLACED">ORDER_PLACED</option>
+                              <option value="CONFIRMED">CONFIRMED</option>
+                              <option value="PROCESSING">PROCESSING</option>
+                              <option value="PACKED">PACKED</option>
+                              <option value="SHIPPED">SHIPPED</option>
+                              <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                              <option value="DELIVERED">DELIVERED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-2 text-right space-x-1.5">
+                            {isAwaitingVerification && (
+                              <button
+                                onClick={() => handleConfirmPayment(o.id)}
+                                disabled={verifyingPayment}
+                                className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 text-[10px] font-bold"
+                              >
+                                ✓ Confirm
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setOrderDetailModal(o)}
+                              className="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 text-[11px] font-bold"
+                            >
+                              Inspect
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
             </div>
           </div>
+        )}
+
+        {/* WHATSAPP MESSAGE TEMPLATES TAB */}
+        {activeTab === 'whatsapp-templates' && (
+          <WhatsAppMessageTemplatesManager />
         )}
 
         {/* INVENTORY TAB */}
@@ -1321,30 +1519,65 @@ export function AdminDashboardClient({
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div className="p-6 rounded-2xl bg-[#111726] border border-slate-800 space-y-4">
-              <h2 className="text-xl font-extrabold text-white">Malibu2u Platform Configuration</h2>
-              <div className="space-y-3 text-xs text-slate-300">
-                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                  <h4 className="font-bold text-cyan-400">Cashfree PG Integration Status</h4>
-                  <p className="text-slate-400">50% Advance Online + 50% COD configuration is active.</p>
-                </div>
-
-                <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-4">
+              <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-cyan-400" /> Malibu2u Platform & Payment Configuration
+              </h2>
+              <div className="space-y-6 text-xs text-slate-300">
+                
+                {/* Payment Configuration Card */}
+                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
-                      <h4 className="font-bold text-emerald-400 text-sm flex items-center gap-2">
-                        WhatsApp Support Phone Number Configuration
+                      <h4 className="font-bold text-cyan-400 text-sm flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" /> Manual Payment & UPI Configuration
                       </h4>
                       <p className="text-slate-400 text-xs mt-0.5">
-                        Configure the phone number to receive customer inquiries, order tracking chats, and sell/trade quotes.
+                        Configure store UPI ID, Payee Account Name, and instructions sent to customers via WhatsApp.
                       </p>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/30">
-                      ADMIN CONTROL ONLY
+                    <span className="px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30">
+                      WHATSAPP FIRST
                     </span>
                   </div>
 
                   <form onSubmit={handleSaveWhatsappSettings} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">Store UPI ID *</label>
+                        <input
+                          type="text"
+                          required
+                          value={upiIdInput}
+                          onChange={(e) => setUpiIdInput(e.target.value)}
+                          placeholder="e.g. malibu2u@upi or 8078565355@paytm"
+                          className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-bold mb-1">Payee Account Name</label>
+                        <input
+                          type="text"
+                          value={accountNameInput}
+                          onChange={(e) => setAccountNameInput(e.target.value)}
+                          placeholder="e.g. Malibu2u Gaming"
+                          className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-cyan-400"
+                        />
+                      </div>
+                    </div>
+
                     <div>
+                      <label className="block text-slate-300 font-bold mb-1">Payment Instructions to Customer</label>
+                      <textarea
+                        rows={2}
+                        value={instructionsInput}
+                        onChange={(e) => setInstructionsInput(e.target.value)}
+                        placeholder="Please complete the payment and send the payment screenshot / UTR number in this WhatsApp conversation."
+                        className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800">
                       <label className="block text-slate-300 font-bold mb-1">
                         Support WhatsApp Phone Number *
                       </label>
@@ -1354,7 +1587,7 @@ export function AdminDashboardClient({
                           required
                           value={whatsappInput}
                           onChange={(e) => setWhatsappInput(e.target.value)}
-                          placeholder="e.g. +91 98765 43210 or 9876543210"
+                          placeholder="e.g. +91 80785 65355"
                           className="flex-1 p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-400"
                         />
                         <button
@@ -1362,7 +1595,7 @@ export function AdminDashboardClient({
                           disabled={savingWhatsapp}
                           className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-slate-950 font-extrabold text-xs transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 shrink-0"
                         >
-                          {savingWhatsapp ? 'Saving Changes...' : 'Save Support Number'}
+                          {savingWhatsapp ? 'Saving Changes...' : 'Save All Settings'}
                         </button>
                       </div>
                     </div>
@@ -1372,21 +1605,6 @@ export function AdminDashboardClient({
                         {whatsappMsg.text}
                       </div>
                     )}
-
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-xs space-y-1 font-mono">
-                      <p className="text-slate-400 text-[11px]">
-                        Normalized WhatsApp Target:{' '}
-                        <code className="text-emerald-300 font-bold">
-                          {normalizeWhatsAppNumber(whatsappInput) || 'Invalid / Missing'}
-                        </code>
-                      </p>
-                      <p className="text-slate-400 text-[11px]">
-                        Customer UI Display:{' '}
-                        <code className="text-cyan-300 font-bold">
-                          {formatDisplayPhoneNumber(whatsappInput) || 'Not Configured'}
-                        </code>
-                      </p>
-                    </div>
                   </form>
                 </div>
               </div>
@@ -1856,6 +2074,376 @@ export function AdminDashboardClient({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW ORDER DETAIL MODAL */}
+      {orderDetailModal && (
+        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-[#111726] border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto my-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider block">
+                  ORDER INVOICE & DISPATCH DETAILS
+                </span>
+                <h3 className="text-xl font-extrabold text-white mt-0.5">
+                  Order #{orderDetailModal.id.slice(0, 8)}...
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Placed on {new Date(orderDetailModal.createdAt).toLocaleDateString()} at {new Date(orderDetailModal.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setOrderDetailModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Status & Quick Control */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 block uppercase">Fulfillment Status</span>
+                <span className="text-sm font-bold text-cyan-400 font-mono">{orderDetailModal.status}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-mono">Change Status:</span>
+                <select
+                  value={orderDetailModal.status}
+                  onChange={(e) => handleUpdateOrderStatus(orderDetailModal.id, e.target.value)}
+                  className="bg-slate-950 border border-cyan-500/40 text-xs text-white rounded-xl px-3 py-1.5 focus:outline-none focus:border-cyan-400 font-mono font-bold"
+                >
+                  <option value="ORDER_PLACED">ORDER_PLACED</option>
+                  <option value="ADVANCE_PAID">ADVANCE_PAID</option>
+                  <option value="PROCESSING">PROCESSING</option>
+                  <option value="PACKED">PACKED</option>
+                  <option value="SHIPPED">SHIPPED</option>
+                  <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Payment Verification Required / Proof Review Box */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-mono text-slate-400 block uppercase font-bold">Payment Status & Verification</span>
+                  <span className={`text-sm font-black font-mono ${
+                    orderDetailModal.paymentStatus === 'PAID'
+                      ? 'text-emerald-400'
+                      : orderDetailModal.paymentStatus === 'PROOF_SUBMITTED' || orderDetailModal.paymentStatus === 'UNDER_REVIEW'
+                      ? 'text-amber-400'
+                      : orderDetailModal.paymentStatus === 'REJECTED'
+                      ? 'text-red-400'
+                      : 'text-slate-400'
+                  }`}>
+                    {orderDetailModal.paymentStatus || 'PENDING'}
+                  </span>
+                </div>
+
+                {orderDetailModal.paymentMethod && (
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-950 text-cyan-400 border border-slate-800 text-[11px] font-mono font-bold">
+                    Method: {orderDetailModal.paymentMethod}
+                  </span>
+                )}
+              </div>
+
+              {(orderDetailModal.paymentReference || orderDetailModal.paymentProof) && (
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2">
+                  {orderDetailModal.paymentReference && (
+                    <p className="text-slate-300 font-mono">
+                      <span className="text-slate-500">Transaction Reference / UTR:</span>{' '}
+                      <strong className="text-cyan-300">{orderDetailModal.paymentReference}</strong>
+                    </p>
+                  )}
+                  {orderDetailModal.paymentProof && (
+                    <div>
+                      <span className="text-slate-500 text-[11px] block mb-1">Customer Payment Screenshot:</span>
+                      <a
+                        href={orderDetailModal.paymentProof}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block relative w-32 h-32 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 group"
+                      >
+                        <img
+                          src={orderDetailModal.paymentProof}
+                          alt="Proof"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Admin Action Buttons for Payment Verification */}
+              {orderDetailModal.paymentStatus !== 'PAID' && (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={verifyingPayment}
+                    onClick={() => handleConfirmPayment(orderDetailModal.id)}
+                    className="flex-1 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                  >
+                    <Check className="w-4 h-4" /> Confirm Payment (Mark Paid)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={verifyingPayment}
+                    onClick={() => {
+                      setTargetVerifyOrder(orderDetailModal);
+                      setRejectReasonInput('');
+                      setRejectModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30 font-bold text-xs flex items-center gap-1.5"
+                  >
+                    <X className="w-4 h-4" /> Reject Payment Proof
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Customer & Address Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
+                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold">Customer Account</span>
+                <p className="font-extrabold text-white text-sm">{orderDetailModal.user?.name || 'Customer'}</p>
+                <p className="text-slate-300">{orderDetailModal.user?.email}</p>
+                {orderDetailModal.user?.phone && (
+                  <p className="text-cyan-400 font-mono">{orderDetailModal.user.phone}</p>
+                )}
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
+                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold">Shipping Address</span>
+                {(() => {
+                  let addr: any = null;
+                  try {
+                    addr = orderDetailModal.shippingAddressJson ? JSON.parse(orderDetailModal.shippingAddressJson) : null;
+                  } catch (e) {}
+
+                  if (!addr) {
+                    return <p className="text-slate-400 italic">No address data stored.</p>;
+                  }
+
+                  return (
+                    <div className="text-slate-300 space-y-0.5">
+                      <p className="font-bold text-white">{addr.fullName}</p>
+                      <p>{addr.addressLine1} {addr.addressLine2 ? `, ${addr.addressLine2}` : ''}</p>
+                      <p>{addr.city}, {addr.state} - {addr.postalCode}</p>
+                      <p className="font-mono text-cyan-400">Phone: {addr.phone}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Payment Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 uppercase">Total Amount</span>
+                <p className="text-lg font-black text-white">₹{orderDetailModal.totalAmount.toLocaleString()}</p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/30 space-y-1">
+                <span className="text-[10px] text-emerald-400 uppercase font-bold">Amount Paid</span>
+                <p className="text-lg font-black text-emerald-400">₹{(orderDetailModal.amountPaid || orderDetailModal.advanceAmount || 0).toLocaleString()}</p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-amber-500/30 space-y-1">
+                <span className="text-[10px] text-amber-400 uppercase font-bold">Amount Remaining</span>
+                <p className="text-lg font-black text-amber-400">₹{(orderDetailModal.remainingAmount ?? orderDetailModal.remainingCodAmount ?? 0).toLocaleString()}</p>
+              </div>
+            </div>
+
+            {/* Order Items Table */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-mono text-slate-400 uppercase font-bold">
+                Purchased Items ({orderDetailModal.items?.length || 0})
+              </span>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+                <div className="divide-y divide-slate-800/80">
+                  {orderDetailModal.items && orderDetailModal.items.length > 0 ? (
+                    orderDetailModal.items.map((item: any, idx: number) => {
+                      const img =
+                        item.product?.images?.[0]?.url ||
+                        'https://images.unsplash.com/photo-1606813907291-d86efa9b94db';
+                      return (
+                        <div key={idx} className="p-3.5 flex items-center justify-between gap-4 text-xs">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-slate-950 overflow-hidden relative shrink-0 border border-slate-800">
+                              <Image
+                                src={img}
+                                alt={item.product?.name || 'Product'}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
+                            <div>
+                              <p className="font-bold text-white text-xs">{item.product?.name || 'Item'}</p>
+                              <div className="flex items-center gap-2 mt-0.5 text-[10px] font-mono text-slate-400">
+                                <span>Condition: <strong className="text-emerald-400">{item.condition || 'NEW'}</strong></span>
+                                <span>•</span>
+                                <span>Qty: <strong className="text-white">{item.quantity}</strong></span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right font-mono">
+                            <p className="font-black text-cyan-400 text-sm">₹{(item.price * item.quantity).toLocaleString()}</p>
+                            <span className="text-[10px] text-slate-500">₹{item.price.toLocaleString()} each</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="p-4 text-xs text-slate-400 text-center">No item records found for this order.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setOrderDetailModal(null)}
+                className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs transition-colors"
+              >
+                Close Order Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECT PAYMENT MODAL */}
+      {rejectModalOpen && targetVerifyOrder && (
+        <div className="fixed inset-0 z-[220] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#111726] border border-red-500/30 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" /> Reject Payment Verification
+              </h3>
+              <button onClick={() => setRejectModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              You are about to reject payment proof for Order #{targetVerifyOrder.id.slice(0, 8)}. Please provide a clear reason that will be included in the WhatsApp notification to the customer.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">Rejection Reason</label>
+              <textarea
+                rows={3}
+                value={rejectReasonInput}
+                onChange={(e) => setRejectReasonInput(e.target.value)}
+                placeholder="e.g. UTR reference number not found in bank account statement / screenshot blurry."
+                className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-red-400"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setRejectModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={verifyingPayment}
+                onClick={handleRejectPayment}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs"
+              >
+                {verifyingPayment ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW SELL/TRADE DETAIL MODAL */}
+      {sellDetailModal && (
+        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-[#111726] border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto my-auto shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">
+                  SELL & TRADE QUOTE INSPECTION
+                </span>
+                <h3 className="text-xl font-extrabold text-white mt-0.5">{sellDetailModal.itemName}</h3>
+              </div>
+              <button
+                onClick={() => setSellDetailModal(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Customer Name</span>
+                <p className="font-bold text-white">{sellDetailModal.fullName}</p>
+                <p className="text-slate-300">{sellDetailModal.email}</p>
+                <p className="text-cyan-400 font-mono">{sellDetailModal.phone}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Gear Details</span>
+                <p className="text-white font-mono">Platform: <strong className="text-cyan-400">{sellDetailModal.platform}</strong></p>
+                <p className="text-white font-mono">Condition: <strong className="text-emerald-400">{sellDetailModal.condition}</strong></p>
+                <p className="text-white font-mono">Choice: <strong className="text-amber-400">{sellDetailModal.payoutChoice}</strong></p>
+              </div>
+            </div>
+
+            {sellDetailModal.pickupAddress && (
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
+                <span className="text-[10px] font-mono text-slate-400 uppercase">Pickup Location</span>
+                <p className="text-slate-200">{sellDetailModal.pickupAddress}</p>
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 uppercase block">Status</span>
+                <span className="font-bold text-cyan-400 font-mono">{sellDetailModal.status}</span>
+              </div>
+              <select
+                value={sellDetailModal.status}
+                onChange={(e) => handleUpdateSellRequest(sellDetailModal.id, { status: e.target.value })}
+                className="bg-slate-950 border border-slate-700 text-xs text-white rounded-xl px-3 py-1.5 focus:outline-none focus:border-cyan-400 font-mono"
+              >
+                <option value="PENDING">PENDING</option>
+                <option value="UNDER_REVIEW">UNDER_REVIEW</option>
+                <option value="OFFER_SENT">OFFER_SENT</option>
+                <option value="ACCEPTED">ACCEPTED</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="PICKUP_SCHEDULED">PICKUP_SCHEDULED</option>
+                <option value="RECEIVED">RECEIVED</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setSellDetailModal(null)}
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

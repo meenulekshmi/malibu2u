@@ -118,14 +118,19 @@ model Address {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName     String
+  phone        String
   addressLine1 String
   addressLine2 String?
+  landmark     String?
   city         String
+  district     String?
   state        String
   postalCode   String
   country      String   @default("India")
-  phone        String
+  label        String   @default("Home") // Home, Work, Other
   isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Order {
@@ -133,20 +138,29 @@ model Order {
   userId                 String
   user                   User        @relation(fields: [userId], references: [id])
   totalAmount            Float
+  subtotal               Float?      @default(0)
   discountAmount         Float       @default(0)
+  shippingAmount         Float?      @default(0)
   advanceAmount          Float       @default(0)
   remainingCodAmount     Float       @default(0)
-  status                 String      @default("PROCESSING") // ORDER_PLACED, ADVANCE_PAID, PROCESSING, PACKED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
-  paymentMethod          String      @default("SPLIT_50_50") // SPLIT_50_50, FULL_ONLINE, FULL_COD
-  paymentStatus          String      @default("PENDING") // PENDING, PAID, PARTIAL_PAID, REFUNDED
+  amountDue              Float?      @default(0)
+  amountPaid             Float?      @default(0)
+  remainingAmount        Float?      @default(0)
+  status                 String      @default("PROCESSING") // ORDER_PLACED, PAYMENT_PENDING, CONFIRMED, PROCESSING, PACKED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RETURN_REQUESTED, RETURNED, REFUND_PENDING, REFUNDED
+  paymentMethod          String      @default("UPI") // UPI, BANK_TRANSFER, COD, SPLIT_50_50, FULL_ONLINE, FULL_COD, WHATSAPP
+  paymentStatus          String      @default("PENDING") // PENDING, PROOF_SUBMITTED, UNDER_VERIFICATION, PAID, PARTIALLY_PAID, REJECTED, REFUNDED
   advancePaymentStatus   String      @default("PENDING") // PENDING, PAID, FAILED, REFUNDED
   remainingPaymentStatus String      @default("PENDING") // PENDING, PAID
+  paymentReference       String?
+  paymentProof           String?
+  rejectionReason        String?
   cashfreeOrderId        String?
   cashfreePaymentId      String?
   paymentTimestampsJson  String?
   shippingAddressJson    String
   trackingNumber         String?
   items                  OrderItem[]
+  notificationLogs       NotificationLog[]
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 }
@@ -160,6 +174,34 @@ model OrderItem {
   quantity  Int
   price     Float
   condition String
+}
+
+model WhatsAppMessageTemplate {
+  id          String   @id @default(uuid())
+  eventKey    String   @unique // ORDER_RECEIVED, PAYMENT_REQUIRED, PAYMENT_PROOF_RECEIVED, PAYMENT_CONFIRMED, PAYMENT_REJECTED, ORDER_CONFIRMED, PROCESSING, PACKED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RETURN_REQUESTED, REFUND
+  name        String
+  description String?
+  body        String   // Template with {{variables}}
+  isActive    Boolean  @default(true)
+  autoSend    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationLog {
+  id                String   @id @default(uuid())
+  orderId           String?
+  order             Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  event             String
+  templateKey       String?
+  recipientPhone    String
+  recipientName     String?
+  messageBody       String
+  mediaUrl          String?
+  providerMessageId String?
+  status            String   @default("SENT") // PENDING, SENT, DELIVERED, FAILED
+  error             String?
+  createdAt         DateTime @default(now())
 }
 
 model Review {

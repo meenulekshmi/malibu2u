@@ -38,6 +38,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
+    const currentOrder = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
+        items: { include: { product: true } },
+      },
+    });
+
+    if (!currentOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    const previousStatus = currentOrder.status;
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
@@ -48,10 +62,34 @@ export async function PATCH(request: Request) {
         trackingNumber: trackingNumber || undefined,
       },
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { name: true, email: true, phone: true } },
         items: { include: { product: true } },
       },
     });
+
+    // If status changed, automatically trigger appropriate WhatsApp notification
+    if (status && status !== previousStatus) {
+      const { sendOrderNotification } = await import('@/lib/notification-service');
+      const eventMap: Record<string, string> = {
+        CONFIRMED: 'ORDER_CONFIRMED',
+        PROCESSING: 'PROCESSING',
+        PACKED: 'PACKED',
+        SHIPPED: 'SHIPPED',
+        OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+        DELIVERED: 'DELIVERED',
+        CANCELLED: 'CANCELLED',
+        RETURN_REQUESTED: 'RETURN_REQUESTED',
+        REFUNDED: 'REFUND',
+      };
+
+      const eventKey = eventMap[status];
+      if (eventKey) {
+        await sendOrderNotification(eventKey, {
+          order: updatedOrder,
+          trackingNumber: updatedOrder.trackingNumber || undefined,
+        });
+      }
+    }
 
     return NextResponse.json({ order: updatedOrder });
   } catch (error) {
