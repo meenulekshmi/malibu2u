@@ -2,8 +2,13 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
+const rawSecret = process.env.JWT_SECRET;
+if (process.env.NODE_ENV === 'production' && !rawSecret) {
+  throw new Error('FATAL: JWT_SECRET environment variable is missing in production.');
+}
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'malibu2u-super-secret-jwt-key-2026-gaming-marketplace'
+  rawSecret || 'malibu2u-dev-only-local-secret-do-not-use-in-production'
 );
 
 export interface TokenPayload {

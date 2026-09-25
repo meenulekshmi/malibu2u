@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { normalizeWhatsAppNumber } from '@/lib/whatsapp';
-import fs from 'fs';
-import path from 'path';
 
 export async function GET() {
   try {
@@ -67,16 +65,6 @@ export async function POST(request: Request) {
       }
       const trimmedValue = whatsappNumber.trim();
       await upsertSetting('whatsapp_number', trimmedValue);
-
-      // Sync .env and .env.local files
-      try {
-        const envContent = `NEXT_PUBLIC_WHATSAPP_NUMBER="${trimmedValue}"\n`;
-        const rootDir = process.cwd();
-        fs.writeFileSync(path.join(rootDir, '.env'), envContent, 'utf-8');
-        fs.writeFileSync(path.join(rootDir, '.env.local'), envContent, 'utf-8');
-      } catch (e) {
-        console.warn('Could not rewrite env files:', e);
-      }
     }
 
     if (paymentUpiId !== undefined) {
