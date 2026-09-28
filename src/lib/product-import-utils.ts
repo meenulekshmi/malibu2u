@@ -143,7 +143,8 @@ export function detectCategory(
   url: string = '',
   platform: string = 'PS5'
 ): { name: string; slug: string } {
-  if (rawCat && rawCat.trim()) {
+  // If raw category is explicit, use it unless it is too generic
+  if (rawCat && rawCat.trim() && !['product', 'products', 'item', 'items', 'games'].includes(rawCat.trim().toLowerCase())) {
     const cleanName = rawCat.trim();
     const cleanSlug = rawCatSlug
       ? rawCatSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
@@ -151,33 +152,119 @@ export function detectCategory(
     return { name: cleanName, slug: cleanSlug };
   }
 
-  const combined = `${title} ${url}`.toLowerCase();
+  const combined = `${title} ${url} ${rawCat}`.toLowerCase();
 
-  if (combined.includes('console') || combined.includes('/consoles')) {
+  // 1. PC Gaming Hardware & Components (Highest priority for hardware titles)
+  if (
+    combined.includes('pc hardware') ||
+    combined.includes('pc component') ||
+    combined.includes('gaming pc') ||
+    combined.includes('gaming rig') ||
+    combined.includes('rtx') ||
+    combined.includes('gtx') ||
+    combined.includes('geforce') ||
+    combined.includes('radeon') ||
+    combined.includes('graphics card') ||
+    combined.includes('gpu') ||
+    combined.includes('motherboard') ||
+    combined.includes('ryzen') ||
+    combined.includes('intel core') ||
+    combined.includes('i9-') ||
+    combined.includes('i7-') ||
+    combined.includes('i5-') ||
+    combined.includes('ddr4') ||
+    combined.includes('ddr5') ||
+    combined.includes('cabinet') ||
+    combined.includes('liquid cooler') ||
+    combined.includes('aio cooler') ||
+    combined.includes('psu') ||
+    combined.includes('power supply') ||
+    combined.includes('nvme') ||
+    combined.includes('ssd') ||
+    combined.includes('mechanical keyboard') ||
+    combined.includes('gaming monitor') ||
+    combined.includes('gaming mouse')
+  ) {
+    return { name: 'PC Gaming Hardware', slug: 'pc-hardware' };
+  }
+
+  // 2. Consoles
+  if (
+    combined.includes('console') ||
+    combined.includes('playstation 5 console') ||
+    combined.includes('ps5 console') ||
+    combined.includes('ps5 digital') ||
+    combined.includes('ps5 slim') ||
+    combined.includes('ps5 pro') ||
+    combined.includes('xbox series x console') ||
+    combined.includes('xbox series s console') ||
+    combined.includes('nintendo switch oled') ||
+    combined.includes('nintendo switch console') ||
+    combined.includes('switch lite') ||
+    combined.includes('ps4 console') ||
+    combined.includes('ps4 pro console')
+  ) {
     return { name: 'Consoles', slug: 'consoles' };
   }
-  if (combined.includes('game') || combined.includes('/games') || combined.includes('edition') || combined.includes('disc')) {
-    return { name: 'Games', slug: 'games' };
-  }
-  if (combined.includes('controller') || combined.includes('headset') || combined.includes('accessory') || combined.includes('accessories')) {
+
+  // 3. Controllers & Accessories
+  if (
+    combined.includes('dualsense') ||
+    combined.includes('controller') ||
+    combined.includes('gamepad') ||
+    combined.includes('headset') ||
+    combined.includes('headphones') ||
+    combined.includes('charging dock') ||
+    combined.includes('charging station') ||
+    combined.includes('carrying case') ||
+    combined.includes('racing wheel') ||
+    combined.includes('arcade stick') ||
+    combined.includes('thumb grip') ||
+    combined.includes('accessory') ||
+    combined.includes('accessories')
+  ) {
     return { name: 'Accessories', slug: 'accessories' };
   }
-  if (combined.includes('hardware') || combined.includes('gpu') || combined.includes('graphic')) {
-    return { name: 'PC Hardware', slug: 'pc-hardware' };
+
+  // 4. Video Games
+  if (
+    combined.includes('edition') ||
+    combined.includes('standard edition') ||
+    combined.includes('deluxe edition') ||
+    combined.includes('collector') ||
+    combined.includes('disc') ||
+    combined.includes('cd') ||
+    combined.includes('game') ||
+    combined.includes('remastered') ||
+    combined.includes('remake') ||
+    combined.includes('gta') ||
+    combined.includes('fifa') ||
+    combined.includes('ea sports') ||
+    combined.includes('call of duty') ||
+    combined.includes('spider-man') ||
+    combined.includes('god of war') ||
+    combined.includes('elden ring') ||
+    combined.includes('zelda') ||
+    combined.includes('mario') ||
+    combined.includes('pokemon') ||
+    combined.includes('forza') ||
+    combined.includes('halo') ||
+    combined.includes('assassin') ||
+    combined.includes('resident evil') ||
+    combined.includes('cyberpunk')
+  ) {
+    return { name: 'Video Games', slug: 'games' };
   }
 
-  // Fallback to platform-based or general category
-  if (platform === 'PS5' || platform === 'PS4') {
-    return { name: 'PlayStation Games', slug: 'playstation-games' };
+  // 5. Fallback based on explicit platform
+  if (platform === 'PC') {
+    return { name: 'PC Gaming Hardware', slug: 'pc-hardware' };
   }
-  if (platform.includes('XBOX')) {
-    return { name: 'Xbox Games', slug: 'xbox-games' };
-  }
-  if (platform.includes('NINTENDO')) {
-    return { name: 'Nintendo Switch', slug: 'nintendo-switch' };
+  if (platform === 'ACCESSORIES') {
+    return { name: 'Accessories', slug: 'accessories' };
   }
 
-  return { name: 'Gaming Products', slug: 'gaming-products' };
+  return { name: 'Video Games', slug: 'games' };
 }
 
 /**

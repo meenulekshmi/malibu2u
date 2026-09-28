@@ -126,26 +126,73 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       </div>
 
       {/* Main Grid Layout with Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
         
         {/* Sidebar Filters */}
-        <div className="space-y-6 lg:col-span-1 bg-[#111726] p-6 rounded-2xl border border-slate-800 h-fit">
+        <div className="space-y-5 lg:col-span-1 bg-[#111726] p-4 sm:p-6 rounded-2xl border border-slate-800 h-fit">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-cyan-400" /> Filter Store
             </h3>
-            <Link href="/shop" className="text-[11px] text-cyan-400 hover:underline">
+            <Link href="/shop" className="text-[11px] text-cyan-400 hover:underline font-bold">
               Reset Filters
             </Link>
           </div>
 
-          {/* Condition Filter */}
+          {/* Category Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Condition</label>
-            <div className="space-y-1.5 text-xs text-slate-400">
+            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Category</label>
+            <div className="grid grid-cols-2 sm:grid-cols-1 gap-1 text-xs text-slate-400">
               <Link
                 href="/shop"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
+                  !category ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
+                }`}
+              >
+                All Categories
+              </Link>
+              <Link
+                href="/shop?category=games"
+                className={`block px-3 py-2 rounded-lg transition-colors ${
+                  category === 'games' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
+                }`}
+              >
+                Video Games
+              </Link>
+              <Link
+                href="/shop?category=pc-hardware"
+                className={`block px-3 py-2 rounded-lg transition-colors ${
+                  category === 'pc-hardware' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
+                }`}
+              >
+                PC Hardware
+              </Link>
+              <Link
+                href="/shop?category=consoles"
+                className={`block px-3 py-2 rounded-lg transition-colors ${
+                  category === 'consoles' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
+                }`}
+              >
+                Consoles
+              </Link>
+              <Link
+                href="/shop?category=accessories"
+                className={`block px-3 py-2 rounded-lg transition-colors ${
+                  category === 'accessories' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
+                }`}
+              >
+                Accessories
+              </Link>
+            </div>
+          </div>
+
+          {/* Condition Filter */}
+          <div className="space-y-2 pt-3 border-t border-slate-800">
+            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Condition</label>
+            <div className="grid grid-cols-2 sm:grid-cols-1 gap-1 text-xs text-slate-400">
+              <Link
+                href="/shop"
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   !condition ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -153,7 +200,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </Link>
               <Link
                 href="/shop?condition=NEW"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   condition === 'NEW' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -161,7 +208,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </Link>
               <Link
                 href="/shop?condition=MINT_PREOWNED"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   condition === 'MINT_PREOWNED' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -171,12 +218,12 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           </div>
 
           {/* Platform Filter */}
-          <div className="space-y-2 pt-4 border-t border-slate-800">
+          <div className="space-y-2 pt-3 border-t border-slate-800">
             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Platform</label>
-            <div className="space-y-1.5 text-xs text-slate-400">
+            <div className="grid grid-cols-2 sm:grid-cols-1 gap-1 text-xs text-slate-400">
               <Link
                 href="/shop?platform=PS5"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   platform === 'PS5' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -184,7 +231,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </Link>
               <Link
                 href="/shop?platform=XBOX_SERIES"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   platform === 'XBOX_SERIES' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -192,7 +239,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </Link>
               <Link
                 href="/shop?platform=NINTENDO_SWITCH"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   platform === 'NINTENDO_SWITCH' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -200,7 +247,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </Link>
               <Link
                 href="/shop?platform=PC"
-                className={`block px-3 py-2 rounded-lg ${
+                className={`block px-3 py-2 rounded-lg transition-colors ${
                   platform === 'PC' ? 'bg-cyan-500/10 text-cyan-400 font-bold border border-cyan-500/30' : 'hover:bg-slate-900'
                 }`}
               >
@@ -223,7 +270,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               {products.map((product) => {
                 const primaryImage =
                   product.images.find((img: any) => img.isPrimary)?.url ||
@@ -243,6 +290,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                     rating={product.rating}
                     reviewCount={product.reviewCount}
                     image={primaryImage}
+                    categoryName={product.category?.name || 'GAMES'}
                     isPreOrder={product.isPreOrder}
                   />
                 );
