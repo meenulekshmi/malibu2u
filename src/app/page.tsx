@@ -59,7 +59,7 @@ export default async function HomePage() {
             <span className="text-xs font-mono font-extrabold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" /> FRESH FROM THE VAULT
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight uppercase mt-1">
+            <h2 className="text-3xl sm:text-5xl font-pricedown text-white tracking-wide uppercase mt-1 drop-shadow-sm">
               NEW IN THE ARENA
             </h2>
           </div>
@@ -133,7 +133,7 @@ export default async function HomePage() {
               <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 animate-pulse" /> 42-POINT CERTIFIED PRE-OWNED
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mt-1">
+              <h2 className="text-3xl sm:text-4xl font-pricedown text-white tracking-wide uppercase mt-1 drop-shadow-sm">
                 PRE-OWNED LEGENDS
               </h2>
               <p className="text-xs text-slate-400 mt-1">
@@ -199,7 +199,7 @@ export default async function HomePage() {
             <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
               <Trophy className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> GAMER FAVORITES
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase mt-1">
+            <h2 className="text-3xl sm:text-4xl font-pricedown text-white tracking-wide uppercase mt-1 drop-shadow-sm">
               TOP BEST SELLERS
             </h2>
           </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Caveat } from 'next/font/google';
+import { pricedownFont } from '@/lib/fonts';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -45,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark scroll-smooth ${caveat.variable}`}>
+    <html lang="en" className={`dark scroll-smooth ${caveat.variable} ${pricedownFont.variable}`}>
       <body className="min-h-screen flex flex-col bg-[#090D16] text-slate-100 font-sans antialiased selection:bg-cyan-500 selection:text-slate-950 relative">
         <AmbientBackground />
         <AuthProvider>

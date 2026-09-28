@@ -36,7 +36,7 @@ export function FAQSection() {
         <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
           <HelpCircle className="w-3.5 h-3.5 text-cyan-400 animate-pulse" /> FREQUENTLY ASKED QUESTIONS
         </span>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight uppercase">
+        <h2 className="text-3xl sm:text-4xl font-pricedown text-white tracking-wide uppercase drop-shadow-sm">
           Everything You Need to Know
         </h2>
         <p className="text-xs sm:text-sm text-slate-400">

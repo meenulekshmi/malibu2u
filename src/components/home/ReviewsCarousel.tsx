@@ -26,7 +26,7 @@ export async function ReviewsCarousel() {
           <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
             <Star className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400 animate-pulse" /> COMMUNITY FEEDBACK
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-1 uppercase">
+          <h2 className="text-3xl sm:text-4xl font-pricedown text-white tracking-wide mt-1 uppercase drop-shadow-sm">
             Customer Reviews & Ratings
           </h2>
         </div>

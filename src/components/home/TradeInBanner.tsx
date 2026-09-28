@@ -20,7 +20,7 @@ export function TradeInBanner() {
               <Repeat className="w-3.5 h-3.5 text-emerald-400 animate-spin" style={{ animationDuration: '8s' }} /> SELL OR TRADE YOUR GAMING GEAR
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight uppercase">
+            <h2 className="text-3xl sm:text-5xl font-pricedown text-white tracking-wide leading-tight uppercase drop-shadow-sm">
               Turn Your Used Games & Consoles into{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-300 to-teal-200">
                 Instant Cash or Trade Credit

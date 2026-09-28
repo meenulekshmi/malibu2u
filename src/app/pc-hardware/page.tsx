@@ -68,7 +68,7 @@ export default async function PCHardwarePage({ searchParams }: PCHardwarePagePro
         <span className="text-xs font-mono font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2">
           <Cpu className="w-4 h-4 text-purple-400" /> HIGH-PERFORMANCE PC GAMING VAULT
         </span>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-3xl sm:text-5xl font-pricedown text-white tracking-wide uppercase drop-shadow-sm">
           PC Hardware, Components & Peripherals
         </h1>
         <p className="text-xs text-slate-300 max-w-xl leading-relaxed">

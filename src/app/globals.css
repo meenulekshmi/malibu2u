@@ -27,6 +27,17 @@
   }
 }
 
+/* GTA Pricedown Brand Typography */
+.font-pricedown,
+.font-gta {
+  font-family: var(--font-pricedown), 'Pricedown', Impact, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.gta-title-shadow {
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.9), 0px 0px 20px rgba(0, 242, 254, 0.2);
+}
+
 /* Neon Script Logo Utilities */
 .font-script {
   font-family: var(--font-caveat), 'Caveat', 'Dancing Script', 'Brush Script MT', cursive, sans-serif;

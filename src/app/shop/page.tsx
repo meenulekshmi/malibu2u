@@ -56,7 +56,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
             MALIBU2U CATALOG
           </span>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mt-1">
+          <h1 className="text-3xl sm:text-5xl font-pricedown text-white tracking-wide mt-1 uppercase drop-shadow-sm">
             {platform
               ? `${platform} Gaming Store`
               : category

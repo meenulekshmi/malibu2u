@@ -126,9 +126,9 @@ export function HeroBanner() {
 
               {/* Center Content: Title, Subtitle, CTA Buttons */}
               <div className="max-w-2xl space-y-5 my-auto">
-                {/* Title */}
+                {/* Title in Authentic GTA Pricedown Display Font */}
                 <h1
-                  className={`text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight uppercase leading-[1.08] drop-shadow-md transition-all duration-700 delay-200 ${
+                  className={`text-4xl sm:text-6xl lg:text-7xl font-pricedown text-white tracking-wide uppercase leading-[1.05] drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] gta-title-shadow transition-all duration-700 delay-200 ${
                     isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                   }`}
                 >
