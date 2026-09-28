@@ -1392,9 +1392,30 @@ export function AdminDashboardClient({
                     </div>
                     <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
                       <span className="text-[10px] font-mono text-slate-400">Order: {b.displayOrder}</span>
-                      <button onClick={() => handleDeleteBanner(b.id)} className="text-red-400 hover:underline">
-                        Delete Banner
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => {
+                            setEditingBanner(b);
+                            setBannerForm({
+                              id: b.id,
+                              title: b.title,
+                              subtitle: b.subtitle || '',
+                              image: b.image,
+                              buttonText: b.buttonText || 'Shop Now',
+                              buttonUrl: b.buttonUrl || '/shop',
+                              displayOrder: String(b.displayOrder ?? 0),
+                              active: b.active ?? true,
+                            });
+                            setBannerModalOpen(true);
+                          }}
+                          className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline"
+                        >
+                          Edit Banner
+                        </button>
+                        <button onClick={() => handleDeleteBanner(b.id)} className="text-red-400 hover:underline">
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1984,7 +2005,9 @@ export function AdminDashboardClient({
       {bannerModalOpen && (
         <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
           <div className="bg-[#111726] border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto my-auto shadow-2xl">
-            <h3 className="text-lg font-extrabold text-white">Add Hero Promotional Banner</h3>
+            <h3 className="text-lg font-extrabold text-white">
+              {editingBanner ? 'Edit Hero Promotional Banner' : 'Add Hero Promotional Banner'}
+            </h3>
             <form onSubmit={handleSaveBanner} className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-400 mb-1">Banner Title *</label>
