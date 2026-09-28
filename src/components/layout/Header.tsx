@@ -81,15 +81,7 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-[#090D16]/95 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-black/40">
       {/* Top Announcement Bar */}
       <div className="bg-gradient-to-r from-cyan-950 via-slate-900 to-violet-950 border-b border-cyan-500/20 px-4 py-1.5 text-[11px] font-medium text-slate-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              <Sparkles className="w-3 h-3 mr-1" /> MALIBU2U GUARANTEE
-            </span>
-            <span className="hidden sm:inline text-slate-300">
-              42-Point Quality Check on Pre-owned • 7-Day Replacement • Instant Trade Cash
-            </span>
-          </div>
+        <div className="max-w-7xl mx-auto flex items-center justify-end">
           <div className="flex items-center gap-4 text-xs">
             <Link href="/sell-trade" className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1">
               <Repeat className="w-3 h-3" /> Sell/Trade Gaming Gear
