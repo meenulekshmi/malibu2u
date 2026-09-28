@@ -17,12 +17,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON payload in request body' }, { status: 400 });
     }
 
-    // Support payload as either array directly or object with { products: [...] }
+    // Support payload as either array directly or object with { products: [...], targetCategoryId?: string }
     let rawProducts: any[] = [];
+    let overrideCategoryId: string | undefined = undefined;
+
     if (Array.isArray(body)) {
       rawProducts = body;
     } else if (body && Array.isArray(body.products)) {
       rawProducts = body.products;
+      if (body.targetCategoryId || body.categoryId) {
+        overrideCategoryId = body.targetCategoryId || body.categoryId;
+      }
     } else {
       return NextResponse.json(
         { error: 'Invalid structure: JSON root or "products" field must be an array of products' },
@@ -143,16 +148,20 @@ export async function POST(request: Request) {
 
       // Resolve Category
       let categoryId: string;
-      try {
-        categoryId = await getOrCreateCategory(item.category, item.categorySlug);
-      } catch (err: any) {
-        invalidRecords.push({
-          index: recordIndex,
-          sku: item.sku,
-          name: item.name,
-          reason: `Failed to assign or create category: ${err.message || 'Category error'}`,
-        });
-        continue;
+      if (overrideCategoryId) {
+        categoryId = overrideCategoryId;
+      } else {
+        try {
+          categoryId = await getOrCreateCategory(item.category, item.categorySlug);
+        } catch (err: any) {
+          invalidRecords.push({
+            index: recordIndex,
+            sku: item.sku,
+            name: item.name,
+            reason: `Failed to assign or create category: ${err.message || 'Category error'}`,
+          });
+          continue;
+        }
       }
 
       // Resolve unique Slug

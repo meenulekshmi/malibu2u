@@ -29,6 +29,9 @@ import {
 
 interface BulkProductImportProps {
   onImportComplete?: () => void;
+  targetCategoryId?: string;
+  targetCategoryName?: string;
+  onClose?: () => void;
 }
 
 interface ImportReport {
@@ -42,7 +45,12 @@ interface ImportReport {
   invalidRecords: { index: number; sku?: string; name?: string; reason: string }[];
 }
 
-export function BulkProductImport({ onImportComplete }: BulkProductImportProps) {
+export function BulkProductImport({
+  onImportComplete,
+  targetCategoryId,
+  targetCategoryName,
+  onClose,
+}: BulkProductImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -197,12 +205,16 @@ export function BulkProductImport({ onImportComplete }: BulkProductImportProps) 
     setFileError(null);
 
     try {
+      const payload = targetCategoryId
+        ? { products: parsedData, targetCategoryId }
+        : parsedData;
+
       const response = await fetch('/api/admin/products/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(parsedData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -237,13 +249,30 @@ export function BulkProductImport({ onImportComplete }: BulkProductImportProps) 
         <div>
           <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs font-bold uppercase tracking-wider">
             <Layers className="w-4 h-4" /> Admin Data Pipeline
+            {targetCategoryName && (
+              <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
+                Targeting: {targetCategoryName}
+              </span>
+            )}
           </div>
-          <h2 className="text-xl font-extrabold text-white mt-1">Bulk Product Import</h2>
+          <h2 className="text-xl font-extrabold text-white mt-1">
+            {targetCategoryName ? `Bulk Import into ${targetCategoryName}` : 'Bulk Product Import'}
+          </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Accepts both <strong>Malibu2u standard</strong> and <strong>GameNation scraped JSON</strong> with automatic price, platform, and condition mapping.
+            {targetCategoryName
+              ? `All imported products from this file will be automatically linked to ${targetCategoryName}.`
+              : 'Accepts both Malibu2u standard and GameNation scraped JSON with automatic price, platform, and category mapping.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+            >
+              Back to Categories
+            </button>
+          )}
           {file && (
             <button
               onClick={handleClearFile}

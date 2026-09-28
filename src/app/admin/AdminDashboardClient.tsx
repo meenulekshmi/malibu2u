@@ -32,6 +32,7 @@ import {
   MessageSquare,
   FileCheck2,
   CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { formatDisplayPhoneNumber, normalizeWhatsAppNumber } from '@/lib/whatsapp';
@@ -105,6 +106,7 @@ export function AdminDashboardClient({
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [importingCategory, setImportingCategory] = useState<any | null>(null);
 
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any | null>(null);
@@ -996,67 +998,91 @@ export function AdminDashboardClient({
         {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-6 rounded-2xl bg-[#111726] border border-slate-800">
-              <div>
-                <h2 className="text-xl font-extrabold text-white">Category & Platform Management</h2>
-                <p className="text-xs text-slate-400">Organize gaming catalog categories and parent/child subcategories.</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEditingCategory(null);
-                  setCatForm({ id: '', name: '', slug: '', image: '', description: '', isFeatured: false, parentId: '' });
-                  setCategoryModalOpen(true);
+            {importingCategory ? (
+              <BulkProductImport
+                targetCategoryId={importingCategory.id}
+                targetCategoryName={importingCategory.name}
+                onImportComplete={() => {
+                  refreshData();
                 }}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/20"
-              >
-                + Add Category
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {categories.length === 0 ? (
-                <div className="col-span-full p-8 text-center bg-[#111726] rounded-2xl border border-slate-800">
-                  <p className="text-xs text-slate-400">No categories created yet.</p>
-                </div>
-              ) : (
-                categories.map((cat) => (
-                  <div key={cat.id} className="p-4 rounded-xl bg-[#111726] border border-slate-800 space-y-3 flex flex-col justify-between">
-                    <div>
-                      <h4 className="font-bold text-white text-sm">{cat.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-mono">/ {cat.slug}</p>
-                      <p className="text-xs text-slate-300 mt-1 line-clamp-2">{cat.description || 'No description'}</p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                      <span className="text-[10px] font-mono text-cyan-400">{cat._count?.products || 0} Products</span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingCategory(cat);
-                            setCatForm({
-                              id: cat.id,
-                              name: cat.name,
-                              slug: cat.slug,
-                              image: cat.image || '',
-                              description: cat.description || '',
-                              isFeatured: cat.isFeatured,
-                              parentId: cat.parentId || '',
-                            });
-                            setCategoryModalOpen(true);
-                          }}
-                          className="text-cyan-400 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-400 hover:underline">
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+                onClose={() => setImportingCategory(null)}
+              />
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-[#111726] border border-slate-800">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white">Category & Platform Management</h2>
+                    <p className="text-xs text-slate-400">Organize gaming catalog categories and parent/child subcategories.</p>
                   </div>
-                ))
-              )}
-            </div>
+                  <button
+                    onClick={() => {
+                      setEditingCategory(null);
+                      setCatForm({ id: '', name: '', slug: '', image: '', description: '', isFeatured: false, parentId: '' });
+                      setCategoryModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/20"
+                  >
+                    + Add Category
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {categories.length === 0 ? (
+                    <div className="col-span-full p-8 text-center bg-[#111726] rounded-2xl border border-slate-800">
+                      <p className="text-xs text-slate-400">No categories created yet.</p>
+                    </div>
+                  ) : (
+                    categories.map((cat) => (
+                      <div key={cat.id} className="p-4 rounded-xl bg-[#111726] border border-slate-800 space-y-3 flex flex-col justify-between hover:border-slate-700 transition-colors">
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-bold text-white text-sm">{cat.name}</h4>
+                              <p className="text-[10px] text-slate-400 font-mono">/ {cat.slug}</p>
+                            </div>
+                            <button
+                              onClick={() => setImportingCategory(cat)}
+                              className="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-bold text-[11px] flex items-center gap-1 transition-colors"
+                              title={`Bulk Import products directly into ${cat.name}`}
+                            >
+                              <Upload className="w-3 h-3" /> Import
+                            </button>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-2 line-clamp-2">{cat.description || 'No description'}</p>
+                        </div>
+
+                        <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                          <span className="text-[10px] font-mono text-cyan-400 font-bold">{cat._count?.products || 0} Products</span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => {
+                                setEditingCategory(cat);
+                                setCatForm({
+                                  id: cat.id,
+                                  name: cat.name,
+                                  slug: cat.slug,
+                                  image: cat.image || '',
+                                  description: cat.description || '',
+                                  isFeatured: cat.isFeatured,
+                                  parentId: cat.parentId || '',
+                                });
+                                setCategoryModalOpen(true);
+                              }}
+                              className="text-slate-300 hover:text-white transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button onClick={() => handleDeleteCategory(cat.id)} className="text-red-400 hover:underline">
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
