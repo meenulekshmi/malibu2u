@@ -79,20 +79,6 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-[#090D16]/95 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-black/40">
-      {/* Top Announcement Bar */}
-      <div className="bg-gradient-to-r from-cyan-950 via-slate-900 to-violet-950 border-b border-cyan-500/20 px-4 py-1.5 text-[11px] font-medium text-slate-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-end">
-          <div className="flex items-center gap-4 text-xs">
-            <Link href="/sell-trade" className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1">
-              <Repeat className="w-3 h-3" /> Sell/Trade Gaming Gear
-            </Link>
-            <span className="text-slate-600">|</span>
-            <Link href="/contact" className="hover:text-white transition-colors">
-              Support
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {/* Main Header Bar */}
       <div className="max-w-7xl mx-auto px-4 py-3 sm:py-3.5">
