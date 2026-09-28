@@ -9,7 +9,7 @@
  * - Preserves existing country codes (e.g. 11+ digits or 12 digits starting with 91).
  * - Returns `null` if the input is missing, empty, 'PLACEHOLDER', 'NOT_CONFIGURED', or invalid.
  */
-export const DEFAULT_WHATSAPP_NUMBER = '918078565355';
+export const DEFAULT_WHATSAPP_NUMBER = '917356901744';
 
 export function normalizeWhatsAppNumber(rawNumber?: string | null): string | null {
   const targetNumber = (rawNumber && rawNumber.trim() !== '' && rawNumber !== 'PLACEHOLDER' && rawNumber !== 'NOT_CONFIGURED')

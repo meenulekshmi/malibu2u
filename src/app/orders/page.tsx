@@ -30,7 +30,7 @@ export default async function OrdersPage() {
   const setting = await prisma.systemSetting.findUnique({
     where: { key: 'whatsapp_number' },
   });
-  const supportWhatsAppNumber = setting?.value || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918078565355';
+  const supportWhatsAppNumber = setting?.value || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917356901744';
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">

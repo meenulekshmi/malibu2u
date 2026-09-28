@@ -75,8 +75,8 @@ export function renderTemplate(templateBody: string, context: NotificationContex
 
   const upiId = storeSettings['payment_upi_id'] || 'malibu2u@upi';
   const storeName = storeSettings['store_name'] || 'Malibu2u Gaming';
-  const supportPhone = formatDisplayPhoneNumber(storeSettings['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918078565355') || '+91 80785 65355';
-  const supportWhatsApp = storeSettings['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918078565355';
+  const supportPhone = formatDisplayPhoneNumber(storeSettings['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917356901744') || '+91 73569 01744';
+  const supportWhatsApp = storeSettings['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917356901744';
 
   const variables: Record<string, string> = {
     '{{customer_name}}': user.name || 'Valued Gamer',

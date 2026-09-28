@@ -91,7 +91,7 @@ export function OrderConfirmationModal({
 
   if (!isOpen) return null;
 
-  const rawWhatsappNum = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918078565355';
+  const rawWhatsappNum = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917356901744';
   const isWhatsappAvailable = Boolean(normalizeWhatsAppNumber(rawWhatsappNum));
 
   // Determine mode & calculate total

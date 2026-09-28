@@ -45,7 +45,7 @@ export class ManualPaymentProvider implements PaymentProvider {
     const instructions =
       map['payment_instructions'] ||
       'Please complete the UPI payment and share your screenshot or transaction UTR number in this chat.';
-    const supportContact = map['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '918078565355';
+    const supportContact = map['whatsapp_number'] || process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '917356901744';
 
     const amountDue = order.amountDue || order.advanceAmount || order.totalAmount;
 
