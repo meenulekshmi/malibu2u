@@ -887,7 +887,28 @@ export function AdminDashboardClient({
                     <h2 className="text-xl font-extrabold text-white">Product Catalog Management</h2>
                     <p className="text-xs text-slate-400">Add, edit, pricing, stock, images, and publish store products.</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Re-organize and classify all catalog items into their correct categories (PC Hardware, Consoles, Accessories, Games)?')) return;
+                        try {
+                          const res = await fetch('/api/admin/products/reclassify', { method: 'POST' });
+                          const data = await res.json();
+                          if (data.success) {
+                            alert(data.message || 'Products successfully re-organized!');
+                            refreshData();
+                          } else {
+                            alert(data.error || 'Failed to re-organize');
+                          }
+                        } catch (err: any) {
+                          alert(err.message || 'Error executing reclassification');
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-purple-950/80 hover:bg-purple-900/80 text-purple-300 font-bold text-xs border border-purple-700/60 transition-colors shadow-md"
+                      title="Automatically sort products by title and specifications into PC Hardware, Consoles, Accessories, and Video Games"
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-400" /> Auto-Organize Categories
+                    </button>
                     <button
                       onClick={() => setProductSubTab('bulk-import')}
                       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-colors"
